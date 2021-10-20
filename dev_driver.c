@@ -52,7 +52,7 @@ int file_read(struct file* file, unsigned long long offset, unsigned char* data,
 
 int file_write(struct file* file, unsigned long long offset, unsigned char* data, unsigned int size)
 {
-	printk("Data - ( %s ) written\n", data);
+	printk("Data - ( %s) written\n", data);
 	return kernel_write(file, (void*)data, size, &offset);
 }
 
@@ -70,8 +70,8 @@ ssize_t dev_read(struct file *fp, char __user* buffer, size_t length, loff_t *of
 	printk("inside funtion %s\n", __FUNCTION__);
 
 	int brightness = 0, i;
-	const char *brightnessController = "/sys/class/backlight/intel_backlight/brightness";
-	const char* mouseOutput = "/dev/input/mice";
+	char *brightnessController = "/sys/class/backlight/intel_backlight/brightness";
+	char* mouseOutput = "/dev/input/mice";
 	
 	filehandle1 = file_open(brightnessController, 0, 0);
 	file_read(filehandle1, 0, brightness_buff, 5, brightnessController);
@@ -126,7 +126,7 @@ ssize_t dev_read(struct file *fp, char __user* buffer, size_t length, loff_t *of
 	filehandle1 = file_open(brightnessController, 1, 0);
 	file_write(filehandle1, 0, brightness_buff, 5);
 	file_close(filehandle1);
-	printk("\n");
+
 	return 0;
 
 }
