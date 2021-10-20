@@ -86,11 +86,13 @@ ssize_t dev_read(struct file *fp, char __user* buffer, size_t length, loff_t *of
 	btn_middle = buff[0] & 0x04;
 
 	i = 0;
-	while(i < 5){
-		if(brightness_buff[i] == 0) break;
+	while(i < 5 && (brightness_buff[i] >= 48 && brightness_buff[i] <58)){
 		brightness*=10;
-		brightness += brightness_buff[i++] - 48;
+		printk("Buff data: %d", brightness_buff[i]);
+		brightness += (brightness_buff[i++] - 48);
 	}
+
+	printk("\nBrightness before action %d", brightness);
 
 	if (btn_left > 0)
 	{
@@ -115,11 +117,15 @@ ssize_t dev_read(struct file *fp, char __user* buffer, size_t length, loff_t *of
 		printk(brightness_buff);
 	}
 
-	i = 0;	
+	i = 0;
+	printk("Brightness before copying: %d\n", brightness);	
+	memset(brightness_buff,	0, 10);
 	while(brightness){
-		brightness_buff[i++] = brightness%10;
+		brightness_buff[i++] = brightness%10 + 48;
 		brightness/=10;
 	}
+
+	printk("Updated brightness: %s\n",brightness_buff);
 
 	file_close(filehandle1);
 
