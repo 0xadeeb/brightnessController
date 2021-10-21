@@ -1,5 +1,5 @@
 /*
-Linux Device driver module that changes brightness of the screen on click.
+Linux Device driver module that changes brightness of the screen on mosue scroll.
 */
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -30,9 +30,9 @@ struct file* file_open(const char* path, int flags, int rights)
 	filp = filp_open(path, flags, rights);
 	if (IS_ERR(filp))
 	{
+		printk("Error opening file\n");
 		err = PTR_ERR(filp);
 		return NULL;
-		printk("Error opening file\n");
 	}
 	printk("File (%s) opened\n", path);
 	return filp;
@@ -68,78 +68,71 @@ int dev_open(struct inode *dev_inode, struct file *fp){
 ssize_t dev_read(struct file *fp, char __user* buffer, size_t length, loff_t *offset){
 
 	printk("inside funtion %s\n", __FUNCTION__);
-
-	int brightness = 0, i;
-	char *brightnessController = "/sys/class/backlight/intel_backlight/brightness";
-	char* mouseOutput = "/dev/input/mice";
-	
-	filehandle1 = file_open(brightnessController, 0, 0);
-	file_read(filehandle1, 0, brightness_buff, 5, brightnessController);
-	printk("Current brightness: %s\n", brightness_buff);
-
-	filehandle2 = file_open(mouseOutput, 0, 0);
-	file_read(filehandle2, 0, buff, 3, mouseOutput);
-	printk("Mouse data = (%s)\n", buff);
-
-	btn_left = buff[0] & 0x1;
-	btn_right = buff[0] & 0x2;
-	btn_middle = buff[0] & 0x04;
-
-	i = 0;
-	while(i < 5 && (brightness_buff[i] >= 48 && brightness_buff[i] <58)){
-		brightness*=10;
-		printk("Buff data: %d", brightness_buff[i]);
-		brightness += (brightness_buff[i++] - 48);
-	}
-
-	printk("\nBrightness before action %d", brightness);
-
-	if (btn_left > 0)
-	{
-		printk("brightness_buff is left click:");
-		if (brightness < 95) 
-			brightness += 5;
-		printk(brightness_buff);
-	}
-
-	else if (btn_right > 0)
-	{
-		printk("brightness_buff is right click:");
-		if (brightness > 5)
-			brightness -= 5;
-		printk(brightness_buff);
-	}
-
-	else
-	{
-		printk("brightness_buff is middle click:");
-		//do nothing
-		printk(brightness_buff);
-	}
-
-	i = 0;
-	printk("Brightness before copying: %d\n", brightness);	
-	memset(brightness_buff,	0, 10);
-	while(brightness){
-		brightness_buff[i++] = brightness%10 + 48;
-		brightness/=10;
-	}
-
-	printk("Updated brightness: %s\n",brightness_buff);
-
-	file_close(filehandle1);
-
-	filehandle1 = file_open(brightnessController, 1, 0);
-	file_write(filehandle1, 0, brightness_buff, 5);
-	file_close(filehandle1);
-
 	return 0;
 
 }
 
 ssize_t dev_write(struct file *fp, const char __user* buffer, size_t length, loff_t *offset){
 	
-	printk("Inside funtion %s\n", __FUNCTION__);
+	if(copy_from_user(buff, buffer, length) != 0){
+		printk("Error opening write\n");
+		return -EFAULT;
+	}
+	
+	printk("Inside funtion %s, the data gotten is %s\n", __FUNCTION__, buff);
+	int brightness = 0, i, n;
+	char *brightnessController = "/sys/class/backlight/intel_backlight/brightness";
+		
+	filehandle1 = file_open(brightnessController, 0, 0);
+	file_read(filehandle1, 0, brightness_buff, 6, brightnessController);
+	printk("Current brightness: %s\n", brightness_buff);
+
+	i = 0;
+	while(i < 6 && (brightness_buff[i] >= 48 && brightness_buff[i] <58)){
+		brightness*=10;
+		brightness += (brightness_buff[i++] - 48);
+	}
+
+	if (buff[0] == '0')
+	{
+		printk("Up-scroll detected, Brightness increased\n");
+		if (brightness < 7000)
+			brightness += 500;
+		printk(brightness_buff);
+	}
+
+	else if (buff[0] == '1')
+	{
+		printk("Down-scroll detected, Brightness decreased\n");
+		if (brightness > 500)
+			brightness -= 500;
+		printk(brightness_buff);
+	}
+
+	else
+	{
+		printk("No data\n");
+	}
+
+	i = 0;
+	memset(brightness_buff,	0, 10);
+	memset(buff, 0, 10);
+	while(brightness){
+		brightness_buff[i++] = brightness%10 + 48;
+		brightness/=10;
+	}
+	n = i-1;
+	while(i >= 0){
+		buff[n-i] = brightness_buff[i];
+		i--;	
+	}
+	printk("Updated brightness: %s\n", buff);
+	file_close(filehandle1);
+
+	filehandle1 = file_open(brightnessController, O_WRONLY, 0);
+	file_write(filehandle1, 0, buff, 6);
+	file_close(filehandle1);
+
 	return length;
 
 }
@@ -182,4 +175,3 @@ module_exit(dev_exit);
 MODULE_LICENSE("GPL"); 
 MODULE_DESCRIPTION("Mouse Driver");
 MODULE_AUTHOR("Custom");
-

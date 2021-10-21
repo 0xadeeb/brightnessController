@@ -1,8 +1,8 @@
 # Device Driver Implementation
 
-This is an implementation of a custom Linux device driver. It reads mouse clicks and changes the brightness of the screen. A left click decreases brightness and a right click increases brightness.
+This is an implementation of a custom Linux device driver. It reads mouse scroll and changes the brightness of the screen.
 
-The module has been tested on Ubuntu 14.04 with a USB mouse.
+The module has been tested on Ubuntu 20.04, kernel moudle 5.14 with a USB mouse.
 
 ## Working
 
@@ -37,6 +37,7 @@ rmmod module_name
 Execute once:
 
 ```
+su
 mknod -m 666 /dev/mbdriver c 45 1
 ```
 
@@ -45,12 +46,15 @@ Repeat to test the driver: (`dmesg` is for debugging)
 ```
 make
 insmod dev_driver.ko
-./a.out
-dmesg
+./tester    #Scroll up and down to change the brightness
+rmmod dev_driver
+dmesg       #To view the kernel messages
 ```
 
 Finally:
 
 ```
-rmmod dev_driver
+make clean
+rm /dev/mbdriver
+exit
 ```
